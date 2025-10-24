@@ -1,6 +1,16 @@
+#!/usr/bin/env python
+
+# Reaper - Fast-ALPR
+# based on fast-alpr  https://github.com/ankandrew/fast-alpr.git
+#
+# git submodule update --init --recrusive
+# docker build -t reaperml .
+# REAPER=reaper-hostname docker run -v $(pwd):/data -E REAPER -it reaperml
+
 from fast_alpr import ALPR, ALPRResult
 import numpy as np
 import cv2
+import os
 import socket
 import statistics
 
@@ -11,6 +21,8 @@ alpr = ALPR(
 
 # fps decimation (1 in X frames processed)
 fpsDecimation = 30
+reaperHost = "192.168.3.100"
+reaperPort = 2000
 
 # toggle between IR and color
 s_imgIR = True
@@ -78,13 +90,12 @@ def handle_image(image):
                                       dtype=np.uint8), cv2.IMREAD_COLOR)
     alpr_results = alpr.predict(cvimage)
 
-    for r in alpr_results:
-        print(r.ocr.text)
+    for i, r in enumerate(alpr_results):
+        print("#", i, r.ocr.text)
 
     cvmarked = mark_image(cvimage, alpr_results)
-    cv2.imwrite("plate.jpg", cvmarked)
+    cv2.imwrite("/data/reaper-plate.jpg", cvmarked)
 
-    #print(alpr_results)
 
 
 def network_feed(host, port):
@@ -126,4 +137,13 @@ def network_feed(host, port):
 
 
 if __name__ == '__main__':
-    network_feed('42916-50750.lan', 2000)
+    if "REAPER" in os.environ:
+        reaperHost = os.environ["REAPER"]
+    else:
+        print("Missing REAPER variable")
+        exit(1)
+
+    if "FPS" in os.environ:
+        fpsDecimation = int(os.environ["FPS"])
+
+    network_feed(reaperHost, reaperPort)
