@@ -1,0 +1,3 @@
+[submodule "fast-alpr"]
+	path = fast-alpr
+	url = https://github.com/ankandrew/fast-alpr.git
