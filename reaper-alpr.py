@@ -13,6 +13,7 @@ import cv2
 import os
 import socket
 import statistics
+from mjpeg_streamer import MjpegServer, Stream
 
 alpr = ALPR(
     detector_model="yolo-v9-t-384-license-plate-end2end",
@@ -28,6 +29,7 @@ reaperPort = 2000
 s_imgIR = True
 s_FrameNum = -1
 
+stream = Stream("reaper", size=(1640, 922), quality=50, fps=15)
 
 def mark_image(img: np.ndarray, alpr_results: list[ALPRResult]) -> np.ndarray:
     for result in alpr_results:
@@ -96,6 +98,7 @@ def handle_image(image):
     cvmarked = mark_image(cvimage, alpr_results)
     cv2.imwrite("/data/reaper-plate.jpg", cvmarked)
 
+    stream.set_frame(cvmarked)
 
 
 def network_feed(host, port):
@@ -145,5 +148,9 @@ if __name__ == '__main__':
 
     if "FPS" in os.environ:
         fpsDecimation = int(os.environ["FPS"])
+
+    server = MjpegServer("0.0.0.0", 8080)
+    server.add_stream(stream)
+    server.start()
 
     network_feed(reaperHost, reaperPort)
