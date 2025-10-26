@@ -19,3 +19,9 @@ to pull in the new dependencies.
 
 the mjpeg server will be served on port 8080 under `/reaper`, with docker
 forwarding, [http://localhost:8080/reaper](http://localhost:8080/reaper)
+
+## known to-do stuff
+
+* Instructions on how to pass GPU into docker for accelerated support
+* storing matched images by plate
+* logging & export
