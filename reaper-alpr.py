@@ -17,11 +17,12 @@ from mjpeg_streamer import MjpegServer, Stream
 
 alpr = ALPR(
     detector_model="yolo-v9-t-384-license-plate-end2end",
-    ocr_model="cct-xs-v1-global-model",
+    ocr_model="global-plates-mobile-vit-v2-model",
+    #ocr_model="cct-xs-v1-global-model",
 )
 
 # fps decimation (1 in X frames processed)
-fpsDecimation = 30
+fpsDecimation = 15
 reaperHost = "192.168.3.100"
 reaperPort = 2000
 
@@ -84,6 +85,8 @@ def handle_image(image):
         s_imgIR = True
         return
 
+    s_imgIR = False
+
     s_FrameNum = s_FrameNum + 1
     if s_FrameNum % fpsDecimation != 0:
         return
@@ -96,7 +99,7 @@ def handle_image(image):
         print("#", i, r.ocr.text)
 
     cvmarked = mark_image(cvimage, alpr_results)
-    cv2.imwrite("/data/reaper-plate.jpg", cvmarked)
+    # cv2.imwrite("/data/reaper-plate.jpg", cvmarked)
 
     stream.set_frame(cvmarked)
 
@@ -105,36 +108,29 @@ def network_feed(host, port):
     client_socket = socket.socket()
     client_socket.connect((host, port))
 
-    inImage = False
-    curImg = bytearray()
     chunk = bytearray()
-    sPos = 0
+    sPos = -1
     lPos = 0
 
     while True:
         recv = client_socket.recv(1024*256)
-
         chunk.extend(recv)
 
-        epos = 0
-
-        if not inImage:
+        if sPos < 0:
             sPos = chunk.find(b'\xFF\xD8\xFF')
-            if sPos >= 0:
-                inImage = True
-            else:
+            if sPos < 0:
                 continue
 
-        epos = chunk[lPos:].find(b'\xFF\xD9')
-        if epos >= 0:
-            curImg = bytearray(chunk[sPos:lPos+epos+2])
-
-            chunk = chunk[lPos+epos+2:]
-
+        ePos = chunk[lPos:].find(b'\xFF\xD9')
+        if ePos >= 0:
+            curImg = bytearray(chunk[sPos:lPos+ePos+2])
+            chunk = chunk[lPos+ePos+2:]
             handle_image(curImg)
-
-            inImage = False
+            sPos = -1
             lPos = 0
+        else:
+            lPos = len(chunk)
+
 
     client_socket.close()
 
