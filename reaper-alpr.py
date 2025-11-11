@@ -13,12 +13,12 @@ import cv2
 import os
 import socket
 import statistics
+import struct
 from mjpeg_streamer import MjpegServer, Stream
 
 alpr = ALPR(
     detector_model="yolo-v9-t-384-license-plate-end2end",
     ocr_model="global-plates-mobile-vit-v2-model",
-    #ocr_model="cct-xs-v1-global-model",
 )
 
 # fps decimation (1 in X frames processed)
@@ -109,30 +109,77 @@ def network_feed(host, port):
     client_socket.connect((host, port))
 
     chunk = bytearray()
-    sPos = -1
-    lPos = 0
 
     while True:
-        recv = client_socket.recv(1024*256)
-        chunk.extend(recv)
+        while len(chunk) < 4:
+            recv = client_socket.recv(1024*256)
+            chunk.extend(recv)
 
-        if sPos < 0:
-            sPos = chunk.find(b'\xFF\xD8\xFF')
-            if sPos < 0:
-                continue
+        vals = struct.unpack('<I', chunk[:4])
 
-        ePos = chunk[lPos:].find(b'\xFF\xD9')
-        if ePos >= 0:
-            curImg = bytearray(chunk[sPos:lPos+ePos+2])
-            chunk = chunk[lPos+ePos+2:]
-            handle_image(curImg)
-            sPos = -1
-            lPos = 0
+        if vals[0] == 3001:
+            while len(chunk) < 40:
+                recv = client_socket.recv(1024*256)
+                chunk.extend(recv)
+
+            vals = struct.unpack('<IIIIIIIIII', chunk[:40])
+
+            # frametype = vals[0]
+            # cameraid = vals[2]
+            # framenum = vals[8]
+            jpeglen = vals[9]
+
+            # print("IR frametype", frametype, "camera", cameraid, "frame", framenum, "jpeg", jpeglen)
+            while len(chunk) < 40 + jpeglen:
+                recv = client_socket.recv(jpeglen)
+                chunk.extend(recv)
+
+            handle_image(chunk[40:40+jpeglen])
+
+            #print(chunk[40:48].hex(), "...", chunk[40+jpeglen-8:40+jpeglen].hex(), " | ", chunk[40+jpeglen:40+jpeglen+8].hex())
+            chunk = chunk[40+jpeglen:]
+
+        elif vals[0] == 1640:
+            while len(chunk) < 28:
+                recv = client_socket.recv(1024*256)
+                chunk.extend(recv)
+
+            vals = struct.unpack('<IIIIIII', chunk[:28])
+
+            # frametype = vals[0]
+            # cameraid = vals[2]
+            jpeglen = vals[6]
+
+            # print("COLOR frametype", frametype, "camera", cameraid, "jpeg", jpeglen)
+
+            while len(chunk) < 28 + jpeglen:
+                recv = client_socket.recv(jpeglen)
+                chunk.extend(recv)
+
+            # print(chunk[28:36].hex(), "...", chunk[28+jpeglen-8:28+jpeglen].hex(), " | ", chunk[28+jpeglen:28+jpeglen+8].hex())
+
+            chunk = chunk[28+jpeglen:]
+
+        elif vals[0] == 1032:
+            # Marker frame of some sort, no jpeg data
+            while len(chunk) < 4:
+                recv = client_socket.recv(1024)
+                chunk.extend(recv)
+
+            chunk = chunk[4:]
+
         else:
-            lPos = len(chunk)
+            print("unknown frame", vals[0])
 
+            while len(chunk) < 128:
+                recv = client_socket.recv(1024)
+                chunk.extend(recv)
+
+            print(chunk[:128].hex())
+            return
 
     client_socket.close()
+
 
 
 if __name__ == '__main__':

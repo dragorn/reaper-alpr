@@ -7,6 +7,15 @@ docker build -t reaperml .
 REAPER=reaper-hostname docker run -v $(pwd):/data -p 8080:8080 -E REAPER -it reaperml
 ```
 
+## updating
+
+you'll need to rebuild the docker image to pull the newest python code in;
+re-run:
+
+```
+docker build -t reaperml
+```
+
 ## early code
 
 this is highly early experimental code, expect some hiccups and significant lack
@@ -25,3 +34,8 @@ forwarding, [http://localhost:8080/reaper](http://localhost:8080/reaper)
 * Instructions on how to pass GPU into docker for accelerated support
 * storing matched images by plate
 * logging & export
+
+## known issues
+
+* ~~sometimes the images desync and switch to color~~ fixed with new stream
+  parser
