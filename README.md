@@ -3,17 +3,18 @@ based on fast-alpr  https://github.com/ankandrew/fast-alpr.git
 
 ```
 git submodule update --init --recrusive
-docker build -t reaperml .
-REAPER=reaper-hostname docker run -v $(pwd):/data -p 8080:8080 -E REAPER -it reaperml
 ```
 
-## updating
+edit `config/reaperalpr.yaml`
 
-you'll need to rebuild the docker image to pull the newest python code in;
-re-run:
+point the `host` at the IP of your camera, and set the protocol.  it appears
+that older (ie, cheaper) cameras use what we're going to call `protocol 1`, and
+newer raspberry-pi powered cameras use what we're going to call `protocol 2`.
+
+then fire up the docker image:
 
 ```
-docker build -t reaperml
+docker compose up
 ```
 
 ## early code
@@ -28,6 +29,9 @@ to pull in the new dependencies.
 
 the mjpeg server will be served on port 8080 under `/reaper`, with docker
 forwarding, [http://localhost:8080/reaper](http://localhost:8080/reaper)
+
+if your camera supports a full image (protocol v2, apparently), it will be at
+[http://localhost:8080/reaper-color](http://localhost:8080/reaper-color)
 
 ## known to-do stuff
 
