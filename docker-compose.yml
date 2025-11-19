@@ -1,0 +1,13 @@
+services:
+  reaperalpr:
+    image: reaper-alpr
+    build: ./reaper/
+    command: /reaper/reaper-alpr.py
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/data
+      - ./reaper:/reaper
+      - ./config:/config
+    restart: unless-stopped
+

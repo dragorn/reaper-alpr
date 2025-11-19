@@ -1,0 +1,25 @@
+reaperalpr:
+  reaper:
+    # Newer Pi based cameras use what we call protocol 2
+    # host: 192.168.3.103
+    # protocol: 2
+
+    # Older TI based ones use what we'll call protocol 1
+    host: 192.168.1.10
+    protocol: 1
+
+    port: 2000
+
+  processing:
+    frames: 10
+
+  alpr:
+    identify_plates: true
+    detector_model: yolo-v9-t-384-license-plate-end2end
+    ocr_model: global-plates-mobile-vit-v2-model
+
+  mjpeg:
+    serve_mjpeg: true
+    serve_mjpeg_color: true
+    mjpeg_port: 8080
+

@@ -1,0 +1,75 @@
+site_name: FastALPR
+site_author: ankandrew
+site_description: Fast ALPR.
+repo_url: https://github.com/ankandrew/fast-alpr
+theme:
+  name: material
+  features:
+    - content.code.copy
+    - content.code.select
+    - content.footnote.tooltips
+    - header.autohide
+    - navigation.expand
+    - navigation.footer
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.path
+    - navigation.sections
+    - search.highlight
+    - search.suggest
+    - toc.follow
+  palette:
+    - scheme: default
+      toggle:
+        icon: material/lightbulb-outline
+        name: Switch to dark mode
+    - scheme: slate
+      toggle:
+        icon: material/lightbulb
+        name: Switch to light mode
+nav:
+  - Introduction: index.md
+  - Installation: installation.md
+  - Quick Start: quick_start.md
+  - Custom Models: custom_models.md
+  - Contributing: contributing.md
+  - Reference: reference.md
+plugins:
+  - search
+  - mike:
+      alias_type: symlink
+      canonical_version: latest
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [ fast_alpr ]
+        options:
+          members_order: source
+          separate_signature: true
+          filters: [ "!^_" ]
+          docstring_options:
+            ignore_init_summary: true
+          show_signature: true
+          show_source: true
+          heading_level: 2
+          show_root_full_path: false
+          merge_init_into_class: true
+          show_signature_annotations: true
+          signature_crossrefs: true
+extra:
+  version:
+    provider: mike
+  generator: false
+markdown_extensions:
+  - admonition
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.details
+  - pymdownx.superfences
+  - toc:
+      permalink: true
+      title: Page contents
