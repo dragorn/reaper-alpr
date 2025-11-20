@@ -7,7 +7,7 @@ services:
       - "8080:8080"
     volumes:
       - ./data:/data
-      - ./reaper:/reaper
-      - ./config:/config
+      - ./reaper:/reaper:ro
+      - ./config:/config:ro
     restart: unless-stopped
 

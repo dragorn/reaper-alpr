@@ -28,6 +28,7 @@ stream = Stream("reaper", size=(1640, 922), quality=95, fps=15)
 color_stream = Stream("reaper-color", size=(1640, 922), quality=95, fps=15)
 
 protocolVersion = 0
+saveImages = False
 
 def mark_image(img: np.ndarray, alpr_results: list[ALPRResult]) -> np.ndarray:
     for result in alpr_results:
@@ -106,6 +107,8 @@ def network_feed(config):
     client_socket.connect((config['reaperalpr']['reaper']['host'],
                            config['reaperalpr']['reaper']['port']))
 
+    print('INFO: Connected to Reaper camera\n')
+
     chunk = bytearray()
 
     while True:
@@ -124,7 +127,7 @@ def network_feed(config):
                 vals = struct.unpack('<IIIIII', chunk[:24])
 
                 # frametype = vals[0]
-                # cameraid = vals[2]
+                cameraid = vals[2]
                 # framenum = vals[8]
                 jpeglen = vals[5]
 
@@ -134,12 +137,15 @@ def network_feed(config):
                     recv = client_socket.recv(jpeglen)
                     chunk.extend(recv)
 
+                if saveImages:
+                    with open(f'data/{cameraid}.jpg', 'wb') as jpg:
+                        jpg.write(chunk[24:24+jpeglen])
+
                 handle_image(chunk[24:24+jpeglen])
 
                 # v1 doesn't seem to include a color image
                 cvimage = cv2.imdecode(np.asarray(bytearray(chunk[24:24+jpeglen]), dtype=np.uint8), cv2.IMREAD_COLOR)
                 color_stream.set_frame(cvimage)
-
 
                 chunk = chunk[24+jpeglen:]
 
@@ -151,7 +157,7 @@ def network_feed(config):
                 vals = struct.unpack('<IIIIIIIIII', chunk[:40])
 
                 # frametype = vals[0]
-                # cameraid = vals[2]
+                cameraid = vals[2]
                 # framenum = vals[8]
                 jpeglen = vals[9]
 
@@ -160,6 +166,10 @@ def network_feed(config):
                 while len(chunk) < 40 + jpeglen:
                     recv = client_socket.recv(jpeglen)
                     chunk.extend(recv)
+
+                if saveImages:
+                    with open(f'data/{cameraid}.jpg', 'wb') as jpg:
+                        jpg.write(chunk[24:24+jpeglen])
 
                 handle_image(chunk[40:40+jpeglen])
 
@@ -173,14 +183,16 @@ def network_feed(config):
             vals = struct.unpack('<IIIIIII', chunk[:28])
 
             # frametype = vals[0]
-            # cameraid = vals[2]
+            cameraid = vals[2]
             jpeglen = vals[6]
-
-            print("1640", vals)
 
             while len(chunk) < 28 + jpeglen:
                 recv = client_socket.recv(jpeglen)
                 chunk.extend(recv)
+
+            if saveImages:
+                with open(f'data/{cameraid}.jpg', 'wb') as jpg:
+                    jpg.write(chunk[24:24+jpeglen])
 
             cvimage = cv2.imdecode(np.asarray(bytearray(chunk[28:28+jpeglen]), dtype=np.uint8), cv2.IMREAD_COLOR)
             color_stream.set_frame(cvimage)
@@ -215,18 +227,39 @@ if __name__ == '__main__':
     if "REAPER" in os.environ:
         reaperHost = os.environ["REAPER"]
     else:
-        reaperHost = reaperConfig['reaperalpr']['reaper']['host']
+        try:
+            reaperHost = reaperConfig['reaperalpr']['reaper']['host']
+        except KeyError:
+            print('ERROR: no /reaper/host value in config')
+            exit(1)
 
-    protocolVersion = reaperConfig['reaperalpr']['reaper']['protocol']
+    try:
+        saveImages = reaperConfig['reaperalpr']['debug']['save_jpg']
+    except KeyError:
+        print('ERROR: no /debug/save_jpg value in config, defaulting')
 
-    fpsDecimation = reaperConfig['reaperalpr']['processing']['frames']
+    try:
+        protocolVersion = reaperConfig['reaperalpr']['reaper']['protocol']
+    except KeyError:
+        print('ERROR: no /reaper/protocol value in config')
+        exit(1)
+
+    try:
+        fpsDecimation = reaperConfig['reaperalpr']['processing']['frames']
+    except KeyError:
+        print('ERROR: no /procesing/frames value in config, defaulting')
 
 
     if "FPS" in os.environ:
         fpsDecimation = int(os.environ["FPS"])
 
-    server = MjpegServer("0.0.0.0",
-                         reaperConfig['reaperalpr']['mjpeg']['mjpeg_port'])
+    try:
+        mjpgPort = reaperConfig['reaperalpr']['mjpeg']['mjpeg_port']
+    except KeyError:
+        print('ERROR: no /mjpeg/mjpeg_port value in config')
+        exit(1)
+
+    server = MjpegServer("0.0.0.0", mjpgPort)
 
     if reaperConfig['reaperalpr']['mjpeg']['serve_mjpeg']:
         server.add_stream(stream)
@@ -240,6 +273,5 @@ if __name__ == '__main__':
             detector_model=reaperConfig['reaperalpr']['alpr']['detector_model'],
             ocr_model=reaperConfig['reaperalpr']['alpr']['ocr_model'],
             )
-
 
     network_feed(reaperConfig)

@@ -10,6 +10,9 @@ reaperalpr:
 
     port: 2000
 
+  debug:
+    save_jpg: true
+
   processing:
     frames: 10
 
